@@ -23,10 +23,11 @@ local SSL = {}
 local playerName, playerRealm = UnitName("player")
 -- local copy of the List
 SSL.shitList = {}
+-- table containing our event handlers
+SSL.eventHandlers = {}
 
 -- setup event handler to register when we are loaded, and add pointer to saved var containing list
-SSL.frame = CreateFrame("Frame") -- need a frame to register event handlers
-SSL.frame:SetScript("OnEvent", function(self, event, name)
+SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
     if name ~= addon then
         return -- event didn't fire for this addon
     end
@@ -35,8 +36,57 @@ SSL.frame:SetScript("OnEvent", function(self, event, name)
     end
     SSL.shitList = shitlistSaved -- set up local reference to saved list
     SSL.Print("Saved SSL list loaded")
+end
+
+SSL.eventHandlers.GROUP_FORMED = function(self, event, ...)
+    -- print(event)
+end
+SSL.eventHandlers.GROUP_JOINED = function(self, event, ...)
+    -- print(event)
+end
+SSL.eventHandlers.GROUP_ROSTER_UPDATE = function(self, event, ...)
+    -- TODO: this fires multiple times when groups change, unknown what causes this
+    SSL.CheckGroupMembers()
+end
+
+function SSL.CheckGroupMembers()
+    if IsInRaid() then
+        for i = 1, GetNumGroupMembers()-1 do
+            local name = UnitName("raid" .. i)
+            if not (name == nil) and not (SSL.shitList[name] == nil) then
+                SSL.ListedPartyMemberFound(name, SSL.shitList[name].reason)
+            end
+        end
+    elseif IsInGroup() then
+        for i = 1, GetNumGroupMembers()-1 do
+            local name = UnitName("party" .. i)
+            if not (name == nil) and not (SSL.shitList[name] == nil) then
+                SSL.ListedPartyMemberFound(name, SSL.shitList[name].reason)
+            end
+        end
+    else
+        print("not in party or raid")
+    end
+end
+
+function SSL.ListedPartyMemberFound(name, reason)
+    print ("Party member " .. name .. " is on the List!")
+    -- funny, but strictly not necessary :)
+    -- SendChatMessage(name .. " is on my shitlist because " .. reason .. "!", "PARTY")
+end
+
+-- set up our main event bus
+SSL.frame = CreateFrame("Frame") -- need a frame to register event handlers
+SSL.frame:SetScript("OnEvent", function(self, event, ...)
+    if not (SSL.eventHandlers[event] == nil) then
+        SSL.eventHandlers[event](self, event, ...)
+    end
 end)
-SSL.frame:RegisterEvent("ADDON_LOADED") -- register event handler
+
+SSL.frame:RegisterEvent("ADDON_LOADED") -- register event handlers
+-- SSL.frame:RegisterEvent("GROUP_FORMED")
+-- SSL.frame:RegisterEvent("GROUP_JOINED")
+SSL.frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 
 -- add a name to the list, with a given reason (or not)
 function SSL.AddName(name, reason)
@@ -57,20 +107,30 @@ function SSL.AddName(name, reason)
     end
 end
 
-function SSL.AddTarget(reason)
-    -- TODO
-end
-
-function SSL.RemoveTarget()
-    -- TODO
-end
-
 function SSL.RemoveName(name)
     if not (SSL.shitList[name] == nil) then
         SSL.shitList[name] = nil
         SSL.Print(name .. " has been removed from the list.")
     else
         SSL.Print(name .. " is not present in the list.")
+    end
+end
+
+function SSL.AddTarget(reason)
+    local name,realm = UnitName("target")
+    if not (name == nil) then
+        SSL.AddName(name, reason)
+    else
+        SSL.Print("No target found")
+    end
+end
+
+function SSL.RemoveTarget()
+    local name,realm = UnitName("target")
+    if not (name == nil) then
+        SSL.RemoveName(name)
+    else
+        SSL.Print("No target found")
     end
 end
 
@@ -93,18 +153,24 @@ function SSL.ClearList()
     end
 end
 
+function SSL.Help(msg)
+    SSL.Print(msg .. " Use one of the following:\n/ssl add <reason>\n/ssl remove\n/ssl addname <name> <reason>\n/ssl removename <name>\n/ssl list\n/ssl clear")
+end
+
 function SSL.Slash(arg)
     if #arg == 0 then
-        SSL.Print("No command given. Use one of the following: /ssl add <name> <reason>, /ssl list, /ssl remove <name>, /ssl clear")
+        SSL.Help("No command given.")
         return
     end
-    local cmd = string.lower(string.sub(arg, 1, 1)) -- grab first letter of first argument
     local posRest = string.find(arg, " ")
-    local rest = ""
+    local rest, cmd = ""
     if not (posRest == nil) then
+        cmd = string.sub(arg, 1, posRest - 1) -- grab first argument
         rest = string.sub(arg, posRest + 1) -- there was at least one more argument, save it in rest
+    else
+        cmd = arg
     end
-    if cmd == "a" then -- add a name to the list
+    if cmd == "addname" then -- add a name to the list
         local name, reason = ""
         local posRest2 = string.find(rest, " ") -- check for more arguments (reason)
         if not (posRest2 == nil) then -- more arguments found, split into proper variables
@@ -114,14 +180,18 @@ function SSL.Slash(arg)
             name = rest -- no further arguments, rest only contains the name to be added
         end
         SSL.AddName(name, reason)
-    elseif cmd == "l" then -- print the list to chat
+    elseif cmd == "add" then -- add current target to list
+        SSL.AddTarget(rest) -- rest contains reason
+    elseif cmd == "remove" then -- remove current target from list
+        SSL.RemoveTarget()
+    elseif cmd == "list" then -- print the list to chat
         SSL.PrintList()
-    elseif cmd == "r" then -- remove a name from the list
+    elseif cmd == "removename" then -- remove a name from the list
         SSL.RemoveName(rest)
-    elseif cmd == "c" then -- clear the list completely
+    elseif cmd == "clear" then -- clear the list completely
         SSL.ClearList()
     else
-        SSL.Print("Command unknown. Use one of the following: /ssl add <name> <reason>, /ssl list, /ssl remove <name>, /ssl clear")
+        SSL.Help("Unrecognized command.")
     end
 end
 
