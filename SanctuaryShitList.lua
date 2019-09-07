@@ -210,14 +210,20 @@ function SSL.IncomingHandshake(player, timestamp)
         return -- we've already initiated, they ought to respond to us
     end
     SSL.AddonMsg("HSREPLY", time(), player)
-    currentlyHandshaking[player] = nil
     SSL.Print("Received handshake from " .. player)
 end
 
-function SSL.ConfirmHandshake(player, timestamp)
+function SSL.ConfirmOutgoingHandshake(player, timestamp)
+    SSL.AddonMsg("HSCONFIRM", time(), player)
     currentlyHandshaking[player] = nil
     SSL.Print("Handshake reciprocated by " .. player)
 end
+
+function SSL.ConfirmIncomingHandshake(player, timestamp)
+    currentlyHandshaking[player] = nil
+    SSL.Print("Handshake reciprocation confirmed by " .. player)
+end
+
 
 function SSL.AddonMsg(messagePrefix, data, target)
     C_ChatInfo.SendAddonMessage("SSLSYNC", messagePrefix .. "|" .. data, "WHISPER", target)
@@ -235,7 +241,9 @@ SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, 
         if messagePrefix == "HSINIT" then -- incoming handshake
             SSL.IncomingHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
         elseif messagePrefix == "HSREPLY" then -- response to outgoing handshake
-            SSL.ConfirmHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
+            SSL.ConfirmOutgoingHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
+        elseif messagePrefix == "HSCONFIRM" then -- confirmation of handshake response
+            SSL.ConfirmIncomingHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
         end
     else
         -- invalid message prefix
