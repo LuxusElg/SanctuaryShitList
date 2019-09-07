@@ -298,6 +298,12 @@ SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, 
             SSL.ConfirmOutgoingHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
         elseif messagePrefix == "HSCONFIRM" then -- confirmation of handshake response
             SSL.ConfirmIncomingHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
+        elseif messagePrefix == "SUBREQ" then
+            SSL.SubscriptionRequestReceived(SSL.NameStrip(sender))
+        elseif messagePrefix == "SUBAPPROVE" then
+            SSL.SubscriptionApproved(SSL.NameStrip(sender), messagePayload)
+        elseif messagePrefix == "SUBDENY" then
+            -- sadface
         elseif messagePrefix == "SYNCSTART" then
             -- clear sync data table for this sender
         elseif messagePrefix == "SYNCDATA" then
