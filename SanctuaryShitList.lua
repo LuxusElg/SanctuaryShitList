@@ -285,14 +285,14 @@ end
 
 function SSL.ApproveSubscriptionRequest(player)
     -- the request was approved, send back the channel name
-    SSL.subscribers[player] = { lastSync = nil } -- just to have a non-nil value
+    SSL.subscribers[player] = { lastSync = 0 } -- just to have a non-nil value
     SSL.AddonMsg("SUBAPPROVE", SSL.subChannel, player)
     SSL.Print("Subscription request by " .. player .. " approved")
 end
 
 function SSL.SubscriptionApproved(player, channel)
     -- the player approved our request, store their channel in our subscription list
-    SSL.subscribedTo[player] = { lastSync = nil }
+    SSL.subscribedTo[player] = { lastSync = 0 }
     SSL.Print("Subscription to " .. player .. " approved.")
 end
 
@@ -313,7 +313,8 @@ function SSL.SyncRequestReceived(player, lastSync)
         SSL.Print("Received unauthorized request for sync from " .. player)
         return -- they are not, fail without responding
     end
-    SSL.SyncListWithPlayer(player, lastSync or 0) -- if lastSync is nil, this is the first time we are syncing
+    SSL.Print("Received sync request from " .. player)
+    SSL.SyncListWithPlayer(player, lastSync) -- if lastSync is nil, this is the first time we are syncing
 end
 
 function SSL.SyncListWithPlayer(player, timestamp)
@@ -321,6 +322,7 @@ function SSL.SyncListWithPlayer(player, timestamp)
         SSL.Print("Unable to sync, list is empty")
         return
     end
+    SSL.Print("Syncing list with " .. player)
     -- send starting message
     SSL.AddonMsg("SYNCSTART", time(), player)
     -- loop through own list and send all entries newer than timestamp
@@ -333,6 +335,7 @@ function SSL.SyncListWithPlayer(player, timestamp)
     local lastSync = time()
     SSL.AddonMsg("SYNCDONE", lastSync, player)
     SSL.subscribers[player].lastSync = lastSync
+    SSL.Print("Syncing with " .. player .. " complete")
 end
 
 function SSL.SyncStart(player)
@@ -478,6 +481,11 @@ function SSL.Slash(arg)
     elseif cmd == "subscribe" then
         if #rest > 0 then
             SSL.SubscribeTo(rest)
+        end
+
+    elseif cmd == "syncto" then
+        if #rest > 0 then
+            SSL.RequestSyncFromPlayer(rest)
         end
     -- END DEBUGGING
     elseif cmd == "version" then
