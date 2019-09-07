@@ -18,7 +18,7 @@
 -- basic local vars, addon name and anonymous namespace (unused)
 local addon, _ns = ...
 -- our main table
-SSL = {}
+local SSL = {}
 -- the current player (playerRealm might be nil)
 local playerName, playerRealm = UnitName("player")
 -- local copy of the List
@@ -29,7 +29,7 @@ SSL.playerSyncStatus = {}
 SSL.eventHandlers = {}
 
 -- other locals
-local version = "0.2.1-classic"
+local version = "0.2.0-classic"
 local currentlyHandshaking = {}
 
 -- setup event handler to register when we are loaded, and add pointer to saved var containing list
@@ -303,8 +303,6 @@ function SSL.Slash(arg)
         end
     elseif cmd == "version" then
         SSL.Print("version " .. version)
-    elseif cmd == "alert" then
-        SSL.SubscriptionPromt('Test')
     else
         SSL.Help("Unrecognized command.")
     end
