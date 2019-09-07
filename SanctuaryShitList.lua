@@ -21,15 +21,19 @@ local addon, _ns = ...
 local SSL = {}
 -- the current player (playerRealm might be nil)
 local playerName, playerRealm = UnitName("player")
--- local copy of the List
+
+-- saved vars: savedLists, subscribedTo, subChannel, subscribers
+-- local copies of saved vars
 SSL.shitList = {}
--- local copy of sync list
-SSL.playerSyncStatus = {}
+SSL.subscribedTo = {}
+SSL.subscribers = {}
+SSL.subChannel = {}
+
 -- table containing our event handlers
 SSL.eventHandlers = {}
 
 -- other locals
-local version = "0.2.0-classic"
+local version = "0.3.0-classic"
 local currentlyHandshaking = {}
 
 -- setup event handler to register when we are loaded, and add pointer to saved var containing list
@@ -37,17 +41,31 @@ SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
     if name ~= addon then
         return -- event didn't fire for this addon
     end
-    if shitlistSaved == nil then
-        shitlistSaved = {} -- initialize list if it hasn't been already
+    if savedLists == nil then
+        savedLists = {} -- initialize list if it hasn't been already
     end
-    SSL.shitList = shitlistSaved -- set up local reference to saved list
+    SSL.shitList = savedLists -- set up local reference to saved list
     
-    if playerSyncStatus == nil then
-        playerSyncStatus = {} -- initialize sync list if it hasn't been already
+    if subscribedTo == nil then
+        subscribedTo = {}
     end
-    SSL.playerSyncStatus = playerSyncStatus -- set up local reference to saved sync list
+    SSL.subscribedTo = subscribedTo
+
+    if subscribers == nil then
+        subscribers = {}
+    end
+    SSL.subscribers = subscribers
+
+    if subChannel == nil then
+        subChannel = SSL.GenerateSubChannel()
+    end
+    SSL.subChannel = subChannel
     
     SSL.Print("Saved variables loaded")
+end
+
+function SSL.GenerateSubChannel()
+    return "SSL" .. playerName .. "HASH GOES HERE"
 end
 
 SSL.eventHandlers.GROUP_FORMED = function(self, event, ...)
@@ -192,20 +210,23 @@ end
             - update last synced timestamp with selected player
 ]]--
 
-function SSL.OutgoingHandshake(player)
+function SSL.OutgoingHandshake(player, callback)
     if currentlyHandshaking[player] == nil then
         SSL.Print("Initiating handshake with " .. player)
-        currentlyHandshaking[player] = time() -- we are initiating the hs
-        SSL.AddonMsg("HSINIT", currentlyHandshaking[player], player)
+        currentlyHandshaking[player] = {
+            ts = time(), -- we are initiating the hs
+            cb = callback
+        }
+        SSL.AddonMsg("HSINIT", currentlyHandshaking[player].ts, player)
     end
     -- else handshake is being initiated against us
 end
 
 function SSL.IncomingHandshake(player, timestamp)
     if currentlyHandshaking[player] == nil then
-        currentlyHandshaking[player] = timestamp -- they are initiating the hs
-    elseif timestamp < currentlyHandshaking[player] then
-        currentlyHandshaking[player] = timestamp -- we have initiated, but they were faster
+        currentlyHandshaking[player] = { ts = timestamp }-- they are initiating the hs
+    elseif timestamp < currentlyHandshaking[player].ts then
+        currentlyHandshaking[player].ts = timestamp -- we have initiated, but they were faster
     else
         return -- we've already initiated, they ought to respond to us
     end
@@ -215,6 +236,9 @@ end
 
 function SSL.ConfirmOutgoingHandshake(player, timestamp)
     SSL.AddonMsg("HSCONFIRM", time(), player)
+    if not (currentlyHandshaking[player].cb == nil) then
+        currentlyHandshaking[player].cb()
+    end
     currentlyHandshaking[player] = nil
     SSL.Print("Handshake reciprocated by " .. player)
 end
@@ -224,6 +248,19 @@ function SSL.ConfirmIncomingHandshake(player, timestamp)
     SSL.Print("Handshake reciprocation confirmed by " .. player)
 end
 
+function SSL.SubscribeTo(player)
+    SSL.Print("Attempting to subscribe to " .. player)
+    SSL.AddonMsg("SUBREQ", time(), player)
+end
+
+function SSL.SubscriptionRequestReceived(player)
+    SSL.Print("Received subscription request from " .. player)
+    SSL.AcceptSubscriptionRequest(player)
+end
+
+function SSL.AcceptSubscriptionRequest(player)
+
+end
 
 function SSL.AddonMsg(messagePrefix, data, target)
     C_ChatInfo.SendAddonMessage("SSLSYNC", messagePrefix .. "|" .. data, "WHISPER", target)
@@ -244,6 +281,14 @@ SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, 
             SSL.ConfirmOutgoingHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
         elseif messagePrefix == "HSCONFIRM" then -- confirmation of handshake response
             SSL.ConfirmIncomingHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
+        elseif messagePrefix == "SYNCSTART" then
+            -- clear sync data table for this sender
+        elseif messagePrefix == "SYNCDATA" then
+            -- append data to sync table for this sender
+        elseif messagePrefix == "SYNCEOF" then
+            -- if we are done sending our own data, send SYNCDONE and apply changes, else wait for their signal
+        elseif messagePrefix == "SYNCDONE" then
+            -- we're done syncing here, apply changes
         end
     else
         -- invalid message prefix
@@ -295,12 +340,19 @@ function SSL.Slash(arg)
         SSL.RemoveName(rest)
     elseif cmd == "clear" then -- clear the list completely
         SSL.ClearList()
+
+    -- DEBUGGING
     elseif cmd == "hsend" then
         if #rest > 0 then
             SSL.OutgoingHandshake(rest)
         else
             SSL.OutgoingHandshake(playerName)
         end
+    elseif cmd == "subscribe" then
+        if #rest > 0 then
+            SSL.OutgoingHandshake(rest, function() SSL.SubscribeTo(rest) end)
+        end
+    -- END DEBUGGING
     elseif cmd == "version" then
         SSL.Print("version " .. version)
     else
