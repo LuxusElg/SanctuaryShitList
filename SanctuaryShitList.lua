@@ -31,7 +31,7 @@ SSL.playerSyncStatus = {}
 SSL.eventHandlers = {}
 
 -- other locals
-local version = "0.2.0-classic"
+local version = "0.2.1-classic"
 local currentlyHandshaking = {}
 
 -- setup event handler to register when we are loaded, and add pointer to saved var containing list
