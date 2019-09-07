@@ -21,33 +21,70 @@ local addon, _ns = ...
 local SSL = {}
 -- the current player (playerRealm might be nil)
 local playerName, playerRealm = UnitName("player")
--- local copy of the List
-SSL.shitList = {}
--- local copy of sync list
-SSL.playerSyncStatus = {}
+
+-- saved vars: savedLists, subscribedTo, subChannel, subscribers
+-- local copies of saved vars
+SSL.savedLists = {}
+SSL.subscribedTo = {}
+SSL.subscribers = {}
+SSL.subChannel = {}
+
 -- table containing our event handlers
 SSL.eventHandlers = {}
 
 -- other locals
-local version = "0.2.0-classic"
+local version = "0.3.0-classic"
 local currentlyHandshaking = {}
+local syncData = {}
 
 -- setup event handler to register when we are loaded, and add pointer to saved var containing list
 SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
     if name ~= addon then
         return -- event didn't fire for this addon
     end
-    if shitlistSaved == nil then
-        shitlistSaved = {} -- initialize list if it hasn't been already
+    if savedLists == nil then
+        savedLists = {} -- initialize list if it hasn't been already
     end
-    SSL.shitList = shitlistSaved -- set up local reference to saved list
-    
-    if playerSyncStatus == nil then
-        playerSyncStatus = {} -- initialize sync list if it hasn't been already
+    SSL.savedLists = savedLists -- set up local reference to saved list
+
+    if SSL.savedLists[playerName] == nil then
+        SSL.savedLists[playerName] = {} -- our own list was empty, initialize it
     end
-    SSL.playerSyncStatus = playerSyncStatus -- set up local reference to saved sync list
     
+    if subscribedTo == nil then
+        subscribedTo = {}
+    end
+    SSL.subscribedTo = subscribedTo
+
+    if subscribers == nil then
+        subscribers = {}
+    end
+    SSL.subscribers = subscribers
+
+    if subChannel == nil then
+        subChannel = SSL.GenerateSubChannel()
+    end
+    SSL.subChannel = subChannel
+    SSL.Print(subChannel)
     SSL.Print("Saved variables loaded")
+end
+
+function SSL.GenerateSubChannel()
+    return "SSL" .. playerName .. SSL.randomNumber() .. SSL.randomNumber()
+end
+
+function SSL.randomNumber()
+    return math.random(100000, 1000000)
+end
+
+function SSL.GetListed(player)
+    local entries = {}
+    for key, value in pairs(SSL.savedLists) do
+        if not (value[player] == nil) then
+            entries[#entries+1] = value[player]
+        end
+    end
+    return entries
 end
 
 SSL.eventHandlers.GROUP_FORMED = function(self, event, ...)
@@ -65,19 +102,21 @@ function SSL.CheckGroupMembers()
     if IsInRaid() then
         for i = 1, GetNumGroupMembers()-1 do
             local name = UnitName("raid" .. i)
-            if not (name == nil) and not (SSL.shitList[name] == nil) then
-                SSL.ListedPartyMemberFound(name, SSL.shitList[name].reason)
+            local entries = SSL.GetListed(name)
+            if not (name == nil) and #entries > 0 then
+                SSL.ListedPartyMemberFound(name, entries[1].reason)
             end
         end
     elseif IsInGroup() then
         for i = 1, GetNumGroupMembers()-1 do
             local name = UnitName("party" .. i)
-            if not (name == nil) and not (SSL.shitList[name] == nil) then
-                SSL.ListedPartyMemberFound(name, SSL.shitList[name].reason)
+            local entries = SSL.GetListed(name)
+            if not (name == nil) and #entries > 0 then
+                SSL.ListedPartyMemberFound(name, entries[1].reason)
             end
         end
     else
-        -- print("not in party or raid")
+        -- not in party or raid
     end
 end
 
@@ -102,7 +141,7 @@ SSL.frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 
 -- add a name to the list, with a given reason (or not)
 function SSL.AddName(name, reason)
-    if SSL.shitList[name] == nil then
+    if SSL.savedLists[playerName][name] == nil then
         SSL.Print("Adding " .. name .. " to the List.")
         local newEntry = {}
         newEntry.ts = time() -- we need a timestamp in order to track changes for proper list syncing later
@@ -113,15 +152,15 @@ function SSL.AddName(name, reason)
         else
             newEntry.reason = "No reason"
         end
-        SSL.shitList[name] = newEntry
+        SSL.savedLists[playerName][name] = newEntry
     else
-        SSL.Print(name .. " is already present in the list, added at " .. SSL.shitList[name].ts)
+        SSL.Print(name .. " is already present in the list, added at " .. SSL.savedLists[playerName][name].ts)
     end
 end
 
 function SSL.RemoveName(name)
-    if not (SSL.shitList[name] == nil) then
-        SSL.shitList[name] = nil
+    if not (SSL.savedLists[playerName][name] == nil) then
+        SSL.savedLists[playerName][name] = nil
         SSL.Print(name .. " has been removed from the list.")
     else
         SSL.Print(name .. " is not present in the list.")
@@ -147,8 +186,8 @@ function SSL.RemoveTarget()
 end
 
 function SSL.PrintList()
-    if not (next(SSL.shitList) == nil) then
-        for key, value in pairs(SSL.shitList) do
+    if not (next(SSL.savedLists[playerName]) == nil) then
+        for key, value in pairs(SSL.savedLists[playerName]) do
             print(value.ts, value.unitName, value.author, value.reason)
         end
     else
@@ -157,8 +196,8 @@ function SSL.PrintList()
 end
 
 function SSL.ClearList()
-    if not (next(SSL.shitList) == nil) then
-        for k,v in pairs(SSL.shitList) do SSL.shitList[k]=nil end
+    if not (next(SSL.savedLists[playerName]) == nil) then
+        for k,v in pairs(SSL.savedLists[playerName]) do SSL.savedLists[playerName][k]=nil end
         SSL.Print("List emptied")
     else
         SSL.Print("List is already empty")
@@ -192,20 +231,23 @@ end
             - update last synced timestamp with selected player
 ]]--
 
-function SSL.OutgoingHandshake(player)
+function SSL.OutgoingHandshake(player, callback)
     if currentlyHandshaking[player] == nil then
         SSL.Print("Initiating handshake with " .. player)
-        currentlyHandshaking[player] = time() -- we are initiating the hs
-        SSL.AddonMsg("HSINIT", currentlyHandshaking[player], player)
+        currentlyHandshaking[player] = {
+            ts = time(), -- we are initiating the hs
+            cb = callback
+        }
+        SSL.AddonMsg("HSINIT", currentlyHandshaking[player].ts, player)
     end
     -- else handshake is being initiated against us
 end
 
 function SSL.IncomingHandshake(player, timestamp)
     if currentlyHandshaking[player] == nil then
-        currentlyHandshaking[player] = timestamp -- they are initiating the hs
-    elseif timestamp < currentlyHandshaking[player] then
-        currentlyHandshaking[player] = timestamp -- we have initiated, but they were faster
+        currentlyHandshaking[player] = { ts = timestamp }-- they are initiating the hs
+    elseif timestamp < currentlyHandshaking[player].ts then
+        currentlyHandshaking[player].ts = timestamp -- we have initiated, but they were faster
     else
         return -- we've already initiated, they ought to respond to us
     end
@@ -215,6 +257,9 @@ end
 
 function SSL.ConfirmOutgoingHandshake(player, timestamp)
     SSL.AddonMsg("HSCONFIRM", time(), player)
+    if not (currentlyHandshaking[player].cb == nil) then
+        currentlyHandshaking[player].cb()
+    end
     currentlyHandshaking[player] = nil
     SSL.Print("Handshake reciprocated by " .. player)
 end
@@ -224,9 +269,124 @@ function SSL.ConfirmIncomingHandshake(player, timestamp)
     SSL.Print("Handshake reciprocation confirmed by " .. player)
 end
 
+-- END HANDSHAKE
+-- START SUBSCRIPTION
+
+function SSL.SubscribeTo(player)
+    SSL.Print("Attempting to subscribe to " .. player)
+    SSL.AddonMsg("SUBREQ", time(), player)
+end
+
+function SSL.SubscriptionRequestReceived(player)
+    SSL.Print("Received subscription request from " .. player)
+    -- this is where logic for displaying a dialog to the user should go
+    SSL.ApproveSubscriptionRequest(player) -- for now, we just accept
+end
+
+function SSL.ApproveSubscriptionRequest(player)
+    -- the request was approved, send back the channel name
+    SSL.subscribers[player] = { lastSync = nil } -- just to have a non-nil value
+    SSL.AddonMsg("SUBAPPROVE", SSL.subChannel, player)
+    SSL.Print("Subscription request by " .. player .. " approved")
+end
+
+function SSL.SubscriptionApproved(player, channel)
+    -- the player approved our request, store their channel in our subscription list
+    SSL.subscribedTo[player] = { lastSync = nil }
+    SSL.Print("Subscription to " .. player .. " approved.")
+end
+
+--END SUBSCRIPTION
+-- START SUB SYNC
+
+function SSL.RequestSyncFromPlayer(player)
+    if SSL.subscribedTo[player] == nil then
+        SSL.Print(player .. " is not in the list of subscriptions.")
+        return
+    end
+    SSL.AddonMsg("SYNCREQ", SSL.subscribedTo[player].lastSync, player)
+end
+
+function SSL.SyncRequestReceived(player, lastSync)
+    -- is this player an approved subscriber?
+    if SSL.subscribers[player] == nil then
+        SSL.Print("Received unauthorized request for sync from " .. player)
+        return -- they are not, fail without responding
+    end
+    SSL.SyncListWithPlayer(player, lastSync or 0) -- if lastSync is nil, this is the first time we are syncing
+end
+
+function SSL.SyncListWithPlayer(player, timestamp)
+    if next(SSL.savedLists[playerName]) == nil then -- our list is empty
+        SSL.Print("Unable to sync, list is empty")
+        return
+    end
+    -- send starting message
+    SSL.AddonMsg("SYNCSTART", time(), player)
+    -- loop through own list and send all entries newer than timestamp
+    for key, value in pairs(SSL.savedLists[playerName]) do
+        if value.ts > timestamp then
+            SSL.AddonMsg("SYNCDATA", SSL.SerializeEntry(value), player)
+        end
+    end
+    -- we're done
+    local lastSync = time()
+    SSL.AddonMsg("SYNCDONE", lastSync, player)
+    SSL.subscribers[player].lastSync = lastSync
+end
+
+function SSL.SyncStart(player)
+    if SSL.savedLists[player] == nil then
+        SSL.savedLists[player] = {}
+    end
+end
+
+function SSL.SyncDone(player)
+    SSL.Print("Subscription to " .. player .. " is now synchronized")
+end
+
+function SSL.ReceiveSyncData(player, serializedEntry)
+    local unserialized = SSL.UnserializeEntry(serializedEntry)
+    SSL.savedLists[player][unserialized.unitName] = unserialized
+    SSL.Print("Received " .. unserialized.unitName .. " (" .. unserialized.reason .. ") from " .. player)
+end
+
+-- END SUB SYNC
 
 function SSL.AddonMsg(messagePrefix, data, target)
     C_ChatInfo.SendAddonMessage("SSLSYNC", messagePrefix .. "|" .. data, "WHISPER", target)
+end
+
+function SSL.SerializeEntry(listEntry)
+    return listEntry.ts .. "|" .. listEntry.unitName .. "|" .. listEntry.reason:gsub("|", "") .. "|" .. listEntry.author
+end
+
+function SSL.UnserializeEntry(listEntry)
+    local unserialized = strsplit("|", listEntry)
+    if #unserialized ~= 4 then
+        SSL.Print("List entry \"" .. listEntry .. "\" is malformed!")
+        return
+    end
+    return { ts = unserialized[1], unitName = unserialized[2], reason = unserialized[3], author = unserialized[4] }
+end
+
+function strsplit(delimiter, text)
+    local list = {}
+    local pos = 1
+    if strfind("", delimiter, 1) then -- this would result in endless loops
+       error("delimiter matches empty string!")
+    end
+    while 1 do
+       local first, last = strfind(text, delimiter, pos)
+       if first then -- found?
+          tinsert(list, strsub(text, pos, first-1))
+          pos = last+1
+       else
+          tinsert(list, strsub(text, pos))
+          break
+       end
+    end
+    return list
 end
 
 SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, sender, target, ...)
@@ -244,6 +404,18 @@ SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, 
             SSL.ConfirmOutgoingHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
         elseif messagePrefix == "HSCONFIRM" then -- confirmation of handshake response
             SSL.ConfirmIncomingHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
+        elseif messagePrefix == "SUBREQ" then
+            SSL.SubscriptionRequestReceived(SSL.NameStrip(sender))
+        elseif messagePrefix == "SUBAPPROVE" then
+            SSL.SubscriptionApproved(SSL.NameStrip(sender), messagePayload)
+        elseif messagePrefix == "SUBDENY" then
+            -- sadface
+        elseif messagePrefix == "SYNCSTART" then
+            SSL.SyncStart(SSL.NameStrip(sender))
+        elseif messagePrefix == "SYNCDATA" then
+            SSL.ReceiveSyncData(SSL.NameStrip(sender), messagePayload)
+        elseif messagePrefix == "SYNCDONE" then
+            SSL.SyncDone(SSL.NameStrip(sender))
         end
     else
         -- invalid message prefix
@@ -295,12 +467,19 @@ function SSL.Slash(arg)
         SSL.RemoveName(rest)
     elseif cmd == "clear" then -- clear the list completely
         SSL.ClearList()
+
+    -- DEBUGGING
     elseif cmd == "hsend" then
         if #rest > 0 then
             SSL.OutgoingHandshake(rest)
         else
             SSL.OutgoingHandshake(playerName)
         end
+    elseif cmd == "subscribe" then
+        if #rest > 0 then
+            SSL.SubscribeTo(rest)
+        end
+    -- END DEBUGGING
     elseif cmd == "version" then
         SSL.Print("version " .. version)
     else
@@ -316,10 +495,11 @@ SLASH_SanctuaryShitList_Slash_Command1 = "/ssl"
 function SSL.TooltipHook(t)
     local name, unit = t:GetUnit() -- unit here contains target ID, e.g. "mouseover", "target", "party1", etc. in this case it will always contain "mouseover"
     if (name) and (unit) then -- this is a valid target
-        if not (SSL.shitList[name] == nil) then -- and it's on the List
+        local entries = SSL.GetListed(name)
+        if #entries > 0 then -- and it's on the List
             GameTooltip:AddLine("WARNING: " .. name .. " is present in the Shit List!")
-            GameTooltip:AddLine("Reason: " .. SSL.shitList[name].reason)
-            GameTooltip:AddLine("Added by " .. SSL.shitList[name].author)
+            GameTooltip:AddLine("Reason: " .. SSL.entries[1].reason)
+            GameTooltip:AddLine("Added by " .. SSL.entries[1].author)
             GameTooltip:Show() -- if Show() is not called, the tooltip will not resize to fit the new lines added
         end
     end
