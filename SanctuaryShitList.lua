@@ -233,9 +233,9 @@ SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, 
         local messagePrefix = string.sub(text, 1, posPrefix - 1) -- get message prefix
         local messagePayload = string.sub(text, posPrefix + 1) -- get payload
         if messagePrefix == "HSINIT" then -- incoming handshake
-            SSL.IncomingHandshake(sender, tonumber(payload))
+            SSL.IncomingHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
         elseif messagePrefix == "HSREPLY" then -- response to outgoing handshake
-            SSL.ConfirmHandshake(sender, tonumber(payload))
+            SSL.ConfirmHandshake(SSL.NameStrip(sender), tonumber(messagePayload))
         end
     else
         -- invalid message prefix
@@ -324,6 +324,14 @@ end
 
 -- register our custom tooltip hook
 GameTooltip:HookScript("OnTooltipSetUnit", SSL.TooltipHook)
+
+function SSL.NameStrip(name)
+    local posDash = string.find(name, "-")
+    if not (posDash == nil) then
+        return string.sub(name, 1, posDash - 1)
+    end
+    return name
+end
 
 -- we done
 SSL.Print("Loading complete")
