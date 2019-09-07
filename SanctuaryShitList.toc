@@ -1,8 +1,8 @@
 ## Interface: 11302
 ## Title: Sanctuary Shit List
 ## Notes: Shitlist addon for both horde and alliance
-## Author: LuxusElg (Discord LuxusElg#1337)
-## Version: v0.3.1-classic
+## Author: LuxusElg (Discord LuxusElg#1337), Spoof
+## Version: v0.4.0-classic
 ## DefaultState: Enabled
 ## SavedVariables: savedLists, subscribedTo, subChannel, subscribers
 Interface.lua
