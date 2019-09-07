@@ -18,7 +18,7 @@
 -- basic local vars, addon name and anonymous namespace (unused)
 local addon, _ns = ...
 -- our main table
-local SSL = {}
+_G.SSL = _G.SSL or {}
 -- the current player (playerRealm might be nil)
 local playerName, playerRealm = UnitName("player")
 
