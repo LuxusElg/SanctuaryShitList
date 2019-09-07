@@ -65,7 +65,7 @@ SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
 end
 
 function SSL.GenerateSubChannel()
-    return "SSL" .. playerName .. "HASH GOES HERE"
+    return "SSL" .. playerName .. "dummyhash"
 end
 
 SSL.eventHandlers.GROUP_FORMED = function(self, event, ...)
@@ -95,7 +95,7 @@ function SSL.CheckGroupMembers()
             end
         end
     else
-        -- print("not in party or raid")
+        -- not in party or raid
     end
 end
 
@@ -248,6 +248,9 @@ function SSL.ConfirmIncomingHandshake(player, timestamp)
     SSL.Print("Handshake reciprocation confirmed by " .. player)
 end
 
+-- END HANDSHAKE
+-- START SUBSCRIPTION
+
 function SSL.SubscribeTo(player)
     SSL.Print("Attempting to subscribe to " .. player)
     SSL.AddonMsg("SUBREQ", time(), player)
@@ -255,12 +258,22 @@ end
 
 function SSL.SubscriptionRequestReceived(player)
     SSL.Print("Received subscription request from " .. player)
-    SSL.AcceptSubscriptionRequest(player)
+    -- this is where logic for displaying a dialog to the user should go
+    SSL.ApproveSubscriptionRequest(player) -- for now, we just accept
 end
 
-function SSL.AcceptSubscriptionRequest(player)
-
+function SSL.ApproveSubscriptionRequest(player)
+    -- the request was approved, send back the channel name
+    SSL.AddonMsg("SUBAPPROVE", SSL.subChannel, player)
 end
+
+function SSL.SubscriptionApproved(player, channel)
+    -- the player approved our request, store their channel in our subscription list
+    SSL.subscribedTo[player] = { lastSync = nil, channel = channel }
+    SSL.Print("Subscription to " .. player .. " approved. Channel \"" .. SSL.subscribedTo[player].channel .. "\" stored.")
+end
+
+--END SUBSCRIPTION
 
 function SSL.AddonMsg(messagePrefix, data, target)
     C_ChatInfo.SendAddonMessage("SSLSYNC", messagePrefix .. "|" .. data, "WHISPER", target)
