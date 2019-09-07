@@ -29,6 +29,7 @@ SSL.playerSyncStatus = {}
 SSL.eventHandlers = {}
 
 -- other locals
+local version = "0.2.0-classic"
 local currentlyHandshaking = {}
 
 -- setup event handler to register when we are loaded, and add pointer to saved var containing list
@@ -226,7 +227,6 @@ SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, 
     if not (prefix == "SSLSYNC") then
         return -- this isnt about us
     end
-
     -- determine message type
     local posPrefix = string.find(text, "|")
     if not (posPrefix == nil) then
@@ -242,6 +242,9 @@ SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, 
     end
 end
 SSL.frame:RegisterEvent("CHAT_MSG_ADDON")
+if not C_ChatInfo.RegisterAddonMessagePrefix("SSLSYNC") then
+    SSL.Print("Unable to register message prefix for syncing")
+end
 
 --[[
     end sync functions
@@ -290,6 +293,8 @@ function SSL.Slash(arg)
         else
             SSL.OutgoingHandshake(playerName)
         end
+    elseif cmd == "version" then
+        SSL.Print("version " .. version)
     else
         SSL.Help("Unrecognized command.")
     end
