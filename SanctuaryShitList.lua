@@ -65,11 +65,11 @@ SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
 end
 
 function SSL.GenerateSubChannel()
-    return "SSL" .. playerName .. SSL.hash()
+    return "SSL" .. playerName .. SSL.randomNumber() .. SSL.randomNumber()
 end
 
-function SSL.hash()
-    return math.random(100000000000, 1000000000000)
+function SSL.randomNumber()
+    return math.random(100000, 1000000)
 end
 
 SSL.eventHandlers.GROUP_FORMED = function(self, event, ...)
