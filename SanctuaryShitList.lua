@@ -86,7 +86,6 @@ SSL.eventHandlers.GROUP_FORMED = function(self, event, ...)
     -- print(event)
 end
 SSL.eventHandlers.GROUP_JOINED = function(self, event, ...)
-    print(event, ...)
     if IsInGroup() then
         for i = 1, GetNumGroupMembers()-1 do
             local name = UnitName("party" .. i)
