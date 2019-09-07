@@ -33,7 +33,7 @@ SSL.subChannel = {}
 SSL.eventHandlers = {}
 
 -- other locals
-local version = "0.3.0-classic"
+local version = "0.3.1-classic"
 local currentlyHandshaking = {}
 local syncData = {}
 
