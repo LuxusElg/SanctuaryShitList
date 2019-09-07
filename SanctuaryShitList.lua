@@ -373,7 +373,7 @@ function SSL.Slash(arg)
         end
     elseif cmd == "subscribe" then
         if #rest > 0 then
-            SSL.OutgoingHandshake(rest, function() SSL.SubscribeTo(rest) end)
+            SSL.SubscribeTo(rest)
         end
     -- END DEBUGGING
     elseif cmd == "version" then
