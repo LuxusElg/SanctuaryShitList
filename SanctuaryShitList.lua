@@ -60,12 +60,16 @@ SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
         subChannel = SSL.GenerateSubChannel()
     end
     SSL.subChannel = subChannel
-    
+    SSL.Print(subChannel)
     SSL.Print("Saved variables loaded")
 end
 
 function SSL.GenerateSubChannel()
-    return "SSL" .. playerName .. "dummyhash"
+    return "SSL" .. playerName .. SSL.randomNumber() .. SSL.randomNumber()
+end
+
+function SSL.randomNumber()
+    return math.random(100000, 1000000)
 end
 
 SSL.eventHandlers.GROUP_FORMED = function(self, event, ...)
