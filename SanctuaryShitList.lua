@@ -335,11 +335,18 @@ function SSL.SyncListWithPlayer(player, timestamp)
     SSL.subscribers[player].lastSync = lastSync
 end
 
-function SSL.ReceiveSyncData(player, serializedEntry)
-    local unserialized = SSL.UnserializeEntry(serializedEntry)
+function SSL.SyncStart(player)
     if SSL.savedLists[player] == nil then
         SSL.savedLists[player] = {}
     end
+end
+
+function SSL.SyncDone(player)
+    SSL.Print("Subscription to " .. player .. " is now synchronized")
+end
+
+function SSL.ReceiveSyncData(player, serializedEntry)
+    local unserialized = SSL.UnserializeEntry(serializedEntry)
     SSL.savedLists[player][unserialized.unitName] = unserialized
     SSL.Print("Received " .. unserialized.unitName .. " (" .. unserialized.reason .. ") from " .. player)
 end
@@ -404,11 +411,11 @@ SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, 
         elseif messagePrefix == "SUBDENY" then
             -- sadface
         elseif messagePrefix == "SYNCSTART" then
-            -- clear sync data table for this sender
+            SSL.SyncStart(SSL.NameStrip(sender))
         elseif messagePrefix == "SYNCDATA" then
-            -- append data to sync table for this sender
+            SSL.ReceiveSyncData(SSL.NameStrip(sender), messagePayload)
         elseif messagePrefix == "SYNCDONE" then
-            -- we're done syncing here, apply changes
+            SSL.SyncDone(SSL.NameStrip(sender))
         end
     else
         -- invalid message prefix
