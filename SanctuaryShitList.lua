@@ -60,7 +60,7 @@ SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
         subChannel = SSL.GenerateSubChannel()
     end
     SSL.subChannel = subChannel
-    
+    SSL.Print(subChannel)
     SSL.Print("Saved variables loaded")
 end
 
