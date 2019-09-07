@@ -23,8 +23,13 @@ local SSL = {}
 local playerName, playerRealm = UnitName("player")
 -- local copy of the List
 SSL.shitList = {}
+-- local copy of sync list
+SSL.playerSyncStatus = {}
 -- table containing our event handlers
 SSL.eventHandlers = {}
+
+-- other locals
+local currentlyHandshaking = {}
 
 -- setup event handler to register when we are loaded, and add pointer to saved var containing list
 SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
@@ -35,7 +40,13 @@ SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
         shitlistSaved = {} -- initialize list if it hasn't been already
     end
     SSL.shitList = shitlistSaved -- set up local reference to saved list
-    SSL.Print("Saved SSL list loaded")
+    
+    if playerSyncStatus == nil then
+        playerSyncStatus = {} -- initialize sync list if it hasn't been already
+    end
+    SSL.playerSyncStatus = playerSyncStatus -- set up local reference to saved sync list
+    
+    SSL.Print("Saved variables loaded")
 end
 
 SSL.eventHandlers.GROUP_FORMED = function(self, event, ...)
@@ -65,7 +76,7 @@ function SSL.CheckGroupMembers()
             end
         end
     else
-        print("not in party or raid")
+        -- print("not in party or raid")
     end
 end
 
@@ -153,6 +164,89 @@ function SSL.ClearList()
     end
 end
 
+--[[
+    Syncing list across players
+        - cycle party members
+        - determine if selected member has SSL installed (handshake)
+        - establish sending/receiving order
+        - proceed with either method A or method B in syncing list(s) with the selected party member
+
+        METHOD A - one list, synced between all
+            -- sending
+            - check when last we synced with selected party member
+            - send all changes that are more recent than last sync
+            -- receiving
+            - delay until all sending between both players has finished
+            - check timestamp on all incoming changes, apply changes that are more recent
+            -- after
+            - update last synced timestamp with selected player
+
+        METHOD B - to each player, their own list
+            -- sending 
+            - check when last we synced with selected party member
+            - send all changes that are more recent than last sync
+            -- receiving
+            - apply all incoming changes, as they should automatically be more recent
+            -- after
+            - update last synced timestamp with selected player
+]]--
+
+function SSL.OutgoingHandshake(player)
+    if currentlyHandshaking[player] == nil then
+        SSL.Print("Initiating handshake with " .. player)
+        currentlyHandshaking[player] = time() -- we are initiating the hs
+        SSL.AddonMsg("HSINIT", currentlyHandshaking[player], player)
+    end
+    -- else handshake is being initiated against us
+end
+
+function SSL.IncomingHandshake(player, timestamp)
+    if currentlyHandshaking[player] == nil then
+        currentlyHandshaking[player] = timestamp -- they are initiating the hs
+    elseif timestamp < currentlyHandshaking[player] then
+        currentlyHandshaking[player] = timestamp -- we have initiated, but they were faster
+    else
+        return -- we've already initiated, they ought to respond to us
+    end
+    SSL.AddonMsg("HSREPLY", time(), player)
+    currentlyHandshaking[player] = nil
+    SSL.Print("Received handshake from " .. player)
+end
+
+function SSL.ConfirmHandshake(player, timestamp)
+    currentlyHandshaking[player] = nil
+    SSL.Print("Handshake reciprocated by " .. player)
+end
+
+function SSL.AddonMsg(messagePrefix, data, target)
+    C_ChatInfo.SendAddonMessage("SSLSYNC", messagePrefix .. "|" .. data, "WHISPER", target)
+end
+
+SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, sender, target, ...)
+    if not (prefix == "SSLSYNC") then
+        return -- this isnt about us
+    end
+
+    -- determine message type
+    local posPrefix = string.find(text, "|")
+    if not (posPrefix == nil) then
+        local messagePrefix = string.sub(text, 1, posPrefix - 1) -- get message prefix
+        local messagePayload = string.sub(text, posPrefix + 1) -- get payload
+        if messagePrefix == "HSINIT" then -- incoming handshake
+            SSL.IncomingHandshake(sender, tonumber(payload))
+        elseif messagePrefix == "HSREPLY" then -- response to outgoing handshake
+            SSL.ConfirmHandshake(sender, tonumber(payload))
+        end
+    else
+        -- invalid message prefix
+    end
+end
+SSL.frame:RegisterEvent("CHAT_MSG_ADDON")
+
+--[[
+    end sync functions
+]]--
+
 function SSL.Help(msg)
     SSL.Print(msg .. " Use one of the following:\n/ssl add <reason>\n/ssl remove\n/ssl addname <name> <reason>\n/ssl removename <name>\n/ssl list\n/ssl clear")
 end
@@ -190,6 +284,12 @@ function SSL.Slash(arg)
         SSL.RemoveName(rest)
     elseif cmd == "clear" then -- clear the list completely
         SSL.ClearList()
+    elseif cmd == "hsend" then
+        if #rest > 0 then
+            SSL.OutgoingHandshake(rest)
+        else
+            SSL.OutgoingHandshake(playerName)
+        end
     else
         SSL.Help("Unrecognized command.")
     end
@@ -214,11 +314,11 @@ end
 
 -- basic output to chat
 function SSL.Print(msg, ...)
-    DEFAULT_CHAT_FRAME:AddMessage(msg, ...)
+    DEFAULT_CHAT_FRAME:AddMessage("[SSL] " .. msg, ...)
 end
 
 -- register our custom tooltip hook
 GameTooltip:HookScript("OnTooltipSetUnit", SSL.TooltipHook)
 
 -- we done
-SSL.Print("SSL Loaded")
+SSL.Print("Loading complete")
