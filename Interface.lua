@@ -1,3 +1,3 @@
-function SSL.SubscriptionPromt(name)
-    message(name .. ' would like to subscribe to you')
-end
+local panel = CreateFrame("FRAME")
+panel.name = "Sanctuary Shit List"
+InterfaceOptions_AddCategory(panel)
