@@ -304,7 +304,8 @@ function SSL.RequestSyncFromPlayer(player)
         SSL.Print(player .. " is not in the list of subscriptions.")
         return
     end
-    SSL.AddonMsg("SYNCREQ", SSL.subscribedTo[player].lastSync, player)
+    SSL.Print("Attempting to sync subscription to " .. player)
+    SSL.AddonMsg("SYNCREQ", SSL.subscribedTo[player].lastSync or 0, player)
 end
 
 function SSL.SyncRequestReceived(player, lastSync)
@@ -346,6 +347,7 @@ end
 
 function SSL.SyncDone(player)
     SSL.Print("Subscription to " .. player .. " is now synchronized")
+    SSL.subscribedTo[player].lastSync = time()
 end
 
 function SSL.ReceiveSyncData(player, serializedEntry)
@@ -413,6 +415,8 @@ SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, 
             SSL.SubscriptionApproved(SSL.NameStrip(sender), messagePayload)
         elseif messagePrefix == "SUBDENY" then
             -- sadface
+        elseif messagePrefix == "SYNCREQ" then
+            SSL.SyncRequestReceived(SSL.NameStrip(sender), tonumber(messagePayload))
         elseif messagePrefix == "SYNCSTART" then
             SSL.SyncStart(SSL.NameStrip(sender))
         elseif messagePrefix == "SYNCDATA" then
@@ -506,8 +510,8 @@ function SSL.TooltipHook(t)
         local entries = SSL.GetListed(name)
         if #entries > 0 then -- and it's on the List
             GameTooltip:AddLine("WARNING: " .. name .. " is present in the Shit List!")
-            GameTooltip:AddLine("Reason: " .. SSL.entries[1].reason)
-            GameTooltip:AddLine("Added by " .. SSL.entries[1].author)
+            GameTooltip:AddLine("Reason: " .. entries[1].reason)
+            GameTooltip:AddLine("Added by " .. entries[1].author)
             GameTooltip:Show() -- if Show() is not called, the tooltip will not resize to fit the new lines added
         end
     end
