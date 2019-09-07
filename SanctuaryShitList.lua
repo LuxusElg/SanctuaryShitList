@@ -69,7 +69,7 @@ function SSL.GenerateSubChannel()
 end
 
 function SSL.hash()
-    return math.randomseed()
+    return math.random([100000000000, 1000000000000)
 end
 
 SSL.eventHandlers.GROUP_FORMED = function(self, event, ...)
