@@ -4,6 +4,6 @@
 ## Author: LuxusElg (Discord LuxusElg#1337)
 ## Version: v0.3.1-classic
 ## DefaultState: Enabled
-## SavedVariables: shitlistSaved
+## SavedVariables: savedLists, subscribedTo, subChannel, subscribers
 Interface.lua
 SanctuaryShitList.lua

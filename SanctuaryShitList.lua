@@ -372,7 +372,7 @@ function SSL.UnserializeEntry(listEntry)
         SSL.Print("List entry \"" .. listEntry .. "\" is malformed!")
         return
     end
-    return { ts = unserialized[1], unitName = unserialized[2], reason = unserialized[3], author = unserialized[4] }
+    return { ts = tonumber(unserialized[1]), unitName = unserialized[2], reason = unserialized[3], author = unserialized[4] }
 end
 
 function strsplit(delimiter, text)
@@ -491,6 +491,7 @@ function SSL.Slash(arg)
         if #rest > 0 then
             SSL.RequestSyncFromPlayer(rest)
         end
+
     -- END DEBUGGING
     elseif cmd == "version" then
         SSL.Print("version " .. version)
@@ -510,8 +511,9 @@ function SSL.TooltipHook(t)
         local entries = SSL.GetListed(name)
         if #entries > 0 then -- and it's on the List
             GameTooltip:AddLine("WARNING: " .. name .. " is present in the Shit List!")
-            GameTooltip:AddLine("Reason: " .. entries[1].reason)
-            GameTooltip:AddLine("Added by " .. entries[1].author)
+            for k,v in pairs(entries) do
+                GameTooltip:AddLine(v.reason .. "(added by " .. v.author .. ")")
+            end
             GameTooltip:Show() -- if Show() is not called, the tooltip will not resize to fit the new lines added
         end
     end
