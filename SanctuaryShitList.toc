@@ -2,8 +2,12 @@
 ## Title: Sanctuary Shit List
 ## Notes: Shitlist addon for both horde and alliance
 ## Author: LuxusElg (Discord LuxusElg#1337), Spoof
-## Version: v0.4.0-classic
+## Version: v0.5.0-classic
 ## DefaultState: Enabled
-## SavedVariables: savedLists, subscribedTo, subChannel, subscribers
+## SavedVariables: sslDB
+## SavedVariablesPerCharacter: sslCharDB
+API.lua
+Functions.lua
 Interface.lua
-SanctuaryShitList.lua
+List.lua
+Core.lua
