@@ -18,7 +18,7 @@
 -- arguments passed to us, addon name and addon specific scope
 local addonName, _SSL = ...
 
-_SSL.version = "0.5.0-classic"
+_SSL.version = "0.6.0-classic"
 _SSL.debugLevel = 0
 _SSL.playerID, _SSL.playerName, _SSL.playerRealm = _SSL:GetPlayerInfo()
 _SSL:DebugPrint(1, "Running for " .. _SSL.playerName .. " on " .. _SSL.playerRealm .. " (" .. _SSL.playerID .. ")")
@@ -28,6 +28,8 @@ _SSL.eventHandlers = _SSL.eventHandlers or {}
 
 _SSL.db = {}
 _SSL.chardb = {}
+
+_SSL.offlineFilterTargets = {}
 
 -- setup event handler to register when we are loaded, and add pointer to saved var containing list
 _SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
@@ -85,10 +87,46 @@ _SSL.frame:RegisterEvent("ADDON_LOADED") -- register event handlers
 _SSL.frame:RegisterEvent("GROUP_JOINED")
 -- _SSL.frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 
+-- Fires on map change, login and ui reload
+-- decent place to try to sync to our subscriptions
+_SSL.frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+_SSL.eventHandlers.PLAYER_ENTERING_WORLD = function(self, event, isInitialLogin, isReloadingUi)
+    _SSL:DebugPrint(1, "Attempting to sync all subscriptions...")
+    for k,v in pairs(_SSL.chardb.subscriptions) do
+        _SSL.offlineFilterTargets[#_SSL.offlineFilterTargets+1] = k
+        _SSL:RequestSyncFromPlayer(k)
+    end
+end
+
+-- for intercepting "player offline" warnings
+--_SSL.eventHandlers.CHAT_MSG_SYSTEM = function(self, event, text, ...) end
+--_SSL.frame:RegisterEvent("CHAT_MSG_SYSTEM")
+local function OfflineMessageFilter(chatFrame, event, arg1, arg2, arg3, ...)
+    if #_SSL.offlineFilterTargets == 0 then return false end -- filter inactive
+    for i,v in ipairs(_SSL.offlineFilterTargets) do
+        local pattern = format(ERR_CHAT_PLAYER_NOT_FOUND_S, v)
+        if arg1 == pattern then 
+            _SSL:DebugPrint(1, "Offline warning for target " .. v .. " intercepted! Resetting filter.")
+            _SSL.offlineFilterTargets[i] = nil
+            return true
+        end
+    end
+    return false
+end
+ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", OfflineMessageFilter)
+function _SSL:ClearFilterForPlayer(name)
+    for i,v in ipairs(_SSL.offlineFilterTargets) do
+        if v == name then _SSL.offlineFilterTargets[i] = nil end
+    end
+end
+-- end offline message filtering
+
+-- API event registering
 _SSL.frame:RegisterEvent("CHAT_MSG_ADDON")
 if not C_ChatInfo.RegisterAddonMessagePrefix("SSLSYNC") then
     _SSL:DebugPrint(1, "Unable to register message prefix for syncing")
 end
+-- end API events
 
 function _SSL.Slash(arg)
     if #arg == 0 then
@@ -131,7 +169,7 @@ function _SSL.Slash(arg)
         else
             _SSL:OutgoingHandshake(playerName)
         end
-    elseif cmd == "subscribe" then
+    elseif cmd == "subscribe" or cmd == "sub" then
         if #rest > 0 then
             _SSL:SubscribeTo(rest)
         end

@@ -111,7 +111,8 @@ function _SSL:SyncListWithPlayer(player, timestamp)
 end
 
 function _SSL:SyncStart(player)
-    --
+    -- sync went through, we can at least remove the filter
+    _SSL:ClearFilterForPlayer(player)
 end
 
 function _SSL:SyncDone(player)
