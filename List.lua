@@ -41,7 +41,7 @@ end
 
 function _SSL:GetSubscriberDetails(player)
     if not _SSL:IsSubscriber(player) then return {} end
-    return _SSL.chardb.subscriber[player]
+    return _SSL.chardb.subscribers[player]
 end
 
 function _SSL:AddToSubscribedList(player, entry)

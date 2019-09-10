@@ -86,12 +86,12 @@ function _SSL:SyncRequestReceived(player, lastSync)
         _SSL:Print("Received unauthorized request for sync from " .. player)
         return -- they are not, fail without responding
     end
-    _SSL:DebugPrint(1, "Received sync request from " .. player)
-    _SSL:SyncListWithPlayer(player, lastSync) -- if lastSync is nil, this is the first time we are syncing
+    _SSL:DebugPrint(1, "Received sync request from " .. player .. " (last was " .. lastSync .. ")")
+    _SSL:SyncListWithPlayer(player, lastSync or 0) -- if lastSync is nil, this is the first time we are syncing
 end
 
 function _SSL:SyncListWithPlayer(player, timestamp)
-    if next(_SSL.db.savedLists[_SSL.playerID]) == nil then -- our list is empty
+    if next(_SSL.db.playerLists[_SSL.playerID]) == nil then -- our list is empty
         _SSL:DebugPrint(1, "Unable to sync, list is empty")
         return
     end
@@ -100,7 +100,7 @@ function _SSL:SyncListWithPlayer(player, timestamp)
     -- send starting message
     _SSL:AddonMsg("SYNCSTART", time(), player)
     -- loop through own list and send all entries newer than timestamp
-    for key, value in pairs(_SSL.db.savedLists[_SSL.playerID]) do
+    for key, value in pairs(_SSL.db.playerLists[_SSL.playerID]) do
         _SSL:DebugPrint(3, "Attempting to send " .. key .. ", last updated at " .. value.ts)
         if value.ts > timestamp then
             _SSL:AddonMsg("SYNCDATA", _SSL:SerializeEntry(value), player)
