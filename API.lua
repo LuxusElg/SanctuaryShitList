@@ -101,8 +101,8 @@ function _SSL:SyncListWithPlayer(player, timestamp)
     _SSL:AddonMsg("SYNCSTART", time(), player)
     -- loop through own list and send all entries newer than timestamp
     for key, value in pairs(_SSL.db.playerLists[_SSL.playerID]) do
-        _SSL:DebugPrint(3, "Attempting to send " .. key .. ", last updated at " .. value.ts)
         if value.ts > timestamp then
+            _SSL:DebugPrint(3, "Attempting to send " .. key .. ", last updated at " .. value.ts)
             _SSL:AddonMsg("SYNCDATA", _SSL:SerializeEntry(value), player)
         end
     end
@@ -124,7 +124,7 @@ end
 
 function _SSL:ReceiveSyncData(player, serializedEntry)
     local unserialized = _SSL:UnserializeEntry(serializedEntry)
-    if unserialized.deletedAt > 0 then -- we are removing
+    if (unserialized.deletedAt or 0) > 0 then -- we are removing
         _SSL:RemoveFromSubscribedList(player, unserialized)
     else
         _SSL:AddToSubscribedList(player, unserialized)

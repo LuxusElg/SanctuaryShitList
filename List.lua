@@ -178,7 +178,7 @@ function _SSL:PrintList()
         end
     end
     for key, value in pairs(_SSL.chardb.subscribedLists) do
-        _SSL:Print("-- " .. name .. "'s List --")
+        _SSL:Print("-- " .. key .. "'s List --")
         for k, v in pairs(value) do
             _SSL:Print(v.unitName .. " - because " ..v.reason .. " (" .. date("%d/%m/%y", v.ts) ..")")
         end

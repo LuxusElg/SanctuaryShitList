@@ -18,7 +18,7 @@
 -- arguments passed to us, addon name and addon specific scope
 local addonName, _SSL = ...
 
-_SSL.version = "0.6.2-classic"
+_SSL.version = "0.6.3-classic"
 _SSL.debugLevel = 0
 _SSL.playerID, _SSL.playerName, _SSL.playerRealm = _SSL:GetPlayerInfo()
 _SSL:DebugPrint(1, "Running for " .. _SSL.playerName .. " on " .. _SSL.playerRealm .. " (" .. _SSL.playerID .. ")")
@@ -177,6 +177,11 @@ function _SSL.Slash(arg)
     elseif cmd == "syncto" then
         if #rest > 0 then
             _SSL:RequestSyncFromPlayer(rest)
+        end
+        
+    elseif cmd == "unsub" then
+        if #rest > 0 then
+            _SSL:RemoveSubscription(rest)
         end
 
     -- END DEBUGGING
