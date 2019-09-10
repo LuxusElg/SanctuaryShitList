@@ -48,7 +48,7 @@ function _SSL:AddToSubscribedList(player, entry)
     if not _SSL:IsSubscription(player) then return false end
     if _SSL.chardb.subscribedLists[player][entry.unitName] == nil then -- not present
         _SSL.chardb.subscribedLists[player][entry.unitName] = entry
-    elseif not (_SSL.chardb.subscribedLists[player][entry.unitName] == nil) and _SSL.chardb.subscribedLists[player][entry.unitName].deletedAt > 0 then -- already present, but deleted, check timestamps
+    elseif not (_SSL.chardb.subscribedLists[player][entry.unitName] == nil) and (_SSL.chardb.subscribedLists[player][entry.unitName].deletedAt or 0) > 0 then -- already present, but deleted, check timestamps
         if entry.ts > _SSL.chardb.subscribedLists[player][entry.unitName].deletedAt then -- go ahead and add
             _SSL.chardb.subscribedLists[player][entry.unitName] = entry
         end

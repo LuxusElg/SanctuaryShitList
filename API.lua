@@ -158,16 +158,16 @@ function _SSL:AddonMsg(messagePrefix, data, target)
 end
 
 function _SSL:SerializeEntry(listEntry)
-    return listEntry.ts .. "|" .. listEntry.unitName .. "|" .. listEntry.reason:gsub("|", "") .. "|" .. listEntry.author
+    return listEntry.ts .. "|" .. listEntry.unitName .. "|" .. listEntry.reason:gsub("|", "") .. "|" .. listEntry.author .. "|" .. (listEntry.deletedAt or 0)
 end
 
 function _SSL:UnserializeEntry(listEntry)
     local unserialized = _SSL:strsplit("|", listEntry)
-    if #unserialized ~= 4 then
+    if #unserialized ~= 5 then
         _SSL:DebugPrint(1, "List entry \"" .. listEntry .. "\" is malformed!")
         return
     end
-    return { ts = tonumber(unserialized[1]), unitName = unserialized[2], reason = unserialized[3], author = unserialized[4] }
+    return { ts = tonumber(unserialized[1]), unitName = unserialized[2], reason = unserialized[3], author = unserialized[4], deletedAt = tonumber(unserialized[5]) }
 end
 
 _SSL.eventHandlers.CHAT_MSG_ADDON = function(self, event, prefix, text, channel, sender, target, ...)
