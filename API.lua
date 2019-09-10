@@ -96,10 +96,12 @@ function _SSL:SyncListWithPlayer(player, timestamp)
         return
     end
     _SSL:DebugPrint(1, "Syncing list with " .. player)
+    _SSL:DebugPrint(3, "Timestamp for last sync: " .. timestamp)
     -- send starting message
     _SSL:AddonMsg("SYNCSTART", time(), player)
     -- loop through own list and send all entries newer than timestamp
     for key, value in pairs(_SSL.db.savedLists[_SSL.playerID]) do
+        _SSL:DebugPrint(3, "Attempting to send " .. key .. ", last updated at " .. value.ts)
         if value.ts > timestamp then
             _SSL:AddonMsg("SYNCDATA", _SSL:SerializeEntry(value), player)
         end

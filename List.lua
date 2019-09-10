@@ -70,7 +70,7 @@ function _SSL:GetListed(player)
     local entries = {}
     for key, value in pairs(_SSL.db.playerLists) do
         local realm = _SSL:strsplit("-", key)[2]
-        if realm == _SSL.playerRealm and not (value[player] == nil) then
+        if realm == _SSL.playerRealm and not (value[player] == nil) and (value[player].deletedAt == nil or value[player].deletedAt == 0) then
             entries[#entries+1] = value[player]
         end
     end
@@ -116,20 +116,31 @@ function _SSL:AddName(name, reason)
         newEntry.author = _SSL.playerName
         newEntry.unitName = name
         newEntry.deletedAt = 0
-        if reason then
+        if reason and string.len(reason) > 0 then
             newEntry.reason = reason
         else
             newEntry.reason = "No reason"
         end
         _SSL.db.playerLists[_SSL.playerID][name] = newEntry
+    elseif not (_SSL.db.playerLists[_SSL.playerID][name] == nil) and not (_SSL.db.playerLists[_SSL.playerID][name].deletedAt == nil) and _SSL.db.playerLists[_SSL.playerID][name].deletedAt > 0 then
+        -- in the list but softdeleted
+        _SSL:Print("Adding " .. name .. " to the List.")
+        _SSL.db.playerLists[_SSL.playerID][name].deletedAt = 0
+        _SSL.db.playerLists[_SSL.playerID][name].ts = time()
+        if reason and string.len(reason) > 0 then
+            _SSL.db.playerLists[_SSL.playerID][name].reason = reason
+        else
+            _SSL.db.playerLists[_SSL.playerID][name].reason = "No reason"
+        end
     else
         _SSL:Print(name .. " is already present in the list, added at " .. date("%d/%m/%y %H:%M:%S", _SSL.db.playerLists[_SSL.playerID][name].ts))
     end
 end
 
 function _SSL:RemoveName(name)
-    if not (_SSL.db.playerLists[_SSL.playerID][name] == nil) then
-        _SSL.db.playerLists[_SSL.playerID][name] = nil
+    if not (_SSL.db.playerLists[_SSL.playerID][name] == nil) and (_SSL.db.playerLists[_SSL.playerID][name].deletedAt == nil or _SSL.db.playerLists[_SSL.playerID][name].deletedAt == 0) then
+        _SSL.db.playerLists[_SSL.playerID][name].deletedAt = time()
+        _SSL.db.playerLists[_SSL.playerID][name].ts = time()
         _SSL:Print(name .. " has been removed from the list.")
     else
         _SSL:Print(name .. " is not present in the list.")
@@ -160,7 +171,9 @@ function _SSL:PrintList()
         if realm == _SSL.playerRealm then
             _SSL:Print("-- " .. name .. "'s List --")
             for k, v in pairs(value) do
-                _SSL:Print(v.unitName .. " - because " ..v.reason .. " (" .. date("%d/%m/%y", v.ts) ..")")
+                if v.deletedAt == nil or v.deletedAt == 0 then
+                    _SSL:Print(v.unitName .. " - because " ..v.reason .. " (" .. date("%d/%m/%y", v.ts) ..")")
+                end
             end
         end
     end

@@ -18,7 +18,7 @@
 -- arguments passed to us, addon name and addon specific scope
 local addonName, _SSL = ...
 
-_SSL.version = "0.6.0-classic"
+_SSL.version = "0.6.1-classic"
 _SSL.debugLevel = 0
 _SSL.playerID, _SSL.playerName, _SSL.playerRealm = _SSL:GetPlayerInfo()
 _SSL:DebugPrint(1, "Running for " .. _SSL.playerName .. " on " .. _SSL.playerRealm .. " (" .. _SSL.playerID .. ")")
@@ -107,7 +107,7 @@ local function OfflineMessageFilter(chatFrame, event, arg1, arg2, arg3, ...)
         local pattern = format(ERR_CHAT_PLAYER_NOT_FOUND_S, v)
         if arg1 == pattern then 
             _SSL:DebugPrint(1, "Offline warning for target " .. v .. " intercepted! Resetting filter.")
-            _SSL.offlineFilterTargets[i] = nil
+            _SSL:ClearFilterForPlayer(v)
             return true
         end
     end
