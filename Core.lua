@@ -19,7 +19,7 @@
 local addonName, _SSL = ...
 
 _SSL.version = "0.5.0-classic"
-_SSL.debugLevel = 1
+_SSL.debugLevel = 0
 _SSL.playerID, _SSL.playerName, _SSL.playerRealm = _SSL:GetPlayerInfo()
 _SSL:DebugPrint(1, "Running for " .. _SSL.playerName .. " on " .. _SSL.playerRealm .. " (" .. _SSL.playerID .. ")")
 
@@ -41,6 +41,8 @@ _SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
     _SSL.db.playerLists = _SSL.db.playerLists or {}
     _SSL.db.playerLists[_SSL.playerID] = _SSL.db.playerLists[_SSL.playerID] or {}
     _SSL.db.settings = _SSL.db.settings or {}
+
+    _SSL.debugLevel = _SSL.db.settings.debugLevel or _SSL.debugLevel
 
     sslCharDB = sslCharDB or {}
     _SSL.chardb = sslCharDB
@@ -140,6 +142,12 @@ function _SSL.Slash(arg)
         end
 
     -- END DEBUGGING
+    elseif cmd == "debug" then
+        if tonumber(rest) >= 0 and tonumber(rest) <= 5 then
+            _SSL.db.settings.debugLevel = tonumber(rest)
+            _SSL.debugLevel = tonumber(rest)
+            _SSL:Print("Debug level set to "..rest)
+        end
     elseif cmd == "version" then
         _SSL:Print("Currently running version " .. _SSL.version)
     else

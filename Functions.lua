@@ -54,7 +54,7 @@ function _SSL:Print(msg, ...)
 end
 
 function _SSL:DebugPrint(level, msg, ...)
-    if level >= _SSL.debugLevel then
+    if level <= _SSL.debugLevel then
         _SSL:Print("[v" .. _SSL.version .. " (debug)] " .. msg)
     end
 end
