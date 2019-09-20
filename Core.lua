@@ -18,7 +18,7 @@
 -- arguments passed to us, addon name and addon specific scope
 local addonName, _SSL = ...
 
-_SSL.version = "0.6.4-classic"
+_SSL.version = "0.7.0-classic"
 _SSL.debugLevel = 0
 _SSL.playerID, _SSL.playerName, _SSL.playerRealm = _SSL:GetPlayerInfo()
 _SSL:DebugPrint(1, "Running for " .. _SSL.playerName .. " on " .. _SSL.playerRealm .. " (" .. _SSL.playerID .. ")")
@@ -63,10 +63,10 @@ _SSL.eventHandlers.GROUP_JOINED = function(self, event, ...)
         for i = 1, GetNumGroupMembers()-1 do
             local name = UnitName("party" .. i)
             if _SSL:IsSubscription(name) then -- we're subscribed to this person
-                SSL.RequestSyncFromPlayer(name) -- let's request a sync
+                _SSL.RequestSyncFromPlayer(name) -- let's request a sync
             end
             if _SSL:IsSubscriber(name) then --they're subscribed to us
-                SSL.InvitePlayerToSync(name) -- let's ask if they want to sync
+                _SSL.InvitePlayerToSync(name) -- let's ask if they want to sync
             end
         end
     end
@@ -191,6 +191,8 @@ function _SSL.Slash(arg)
             _SSL.debugLevel = tonumber(rest)
             _SSL:Print("Debug level set to "..rest)
         end
+    elseif cmd == "show" then
+        _SSL.GUI:showList()
     elseif cmd == "version" then
         _SSL:Print("Currently running version " .. _SSL.version)
     else

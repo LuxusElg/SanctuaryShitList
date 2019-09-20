@@ -1,5 +1,52 @@
 local addonName, _SSL = ...
 
+function _SSL:GetPlayerList()
+    local entries = {}
+    
+    for key, value in pairs(_SSL.db.playerLists) do
+        local split = _SSL:strsplit("-", key)
+        if split[2] == _SSL.playerRealm then
+            entries[#entries+1] = split[1]
+        end
+    end
+    for key, value in pairs(_SSL.chardb.subscribedLists) do
+        entries[#entries+1] = key
+    end
+    return entries
+end
+
+function _SSL:GetList(player)
+    local entries = {}
+    for key, value in pairs(_SSL.db.playerLists) do
+        local name, realm = unpack(_SSL:strsplit("-", key))
+        if name == player then
+            for k, v in pairs(value) do
+                if v.deletedAt == nil or v.deletedAt == 0 then
+                    local entry = {}
+                    entry.name = v.unitName
+                    entry.reason = v.reason
+                    entry.ts = date("%d/%m/%y", v.ts) or 0
+                    entries[#entries+1] = entry
+                end
+            end
+            return entries
+        end
+    end
+    for key, value in pairs(_SSL.chardb.subscribedLists) do
+        if player == key then
+            for k, v in pairs(value) do
+                local entry = {}
+                entry.name = v.unitName
+                entry.reason = v.reason
+                entry.ts = date("%d/%m/%y", v.ts) or 0
+                entries[#entries+1] = entry
+            end
+            return entries
+        end
+    end
+    return entries
+end
+
 function _SSL:IsSubscriber(player)
     return not (_SSL.chardb.subscribers[player] == nil)
 end
