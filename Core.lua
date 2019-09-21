@@ -18,7 +18,7 @@
 -- arguments passed to us, addon name and addon specific scope
 local addonName, _SSL = ...
 
-_SSL.version = "0.7.0-classic"
+_SSL.version = "0.8.0-classic"
 _SSL.debugLevel = 0
 _SSL.playerID, _SSL.playerName, _SSL.playerRealm = _SSL:GetPlayerInfo()
 _SSL:DebugPrint(1, "Running for " .. _SSL.playerName .. " on " .. _SSL.playerRealm .. " (" .. _SSL.playerID .. ")")
@@ -54,6 +54,8 @@ _SSL.eventHandlers.ADDON_LOADED = function(self, event, name)
     _SSL.chardb.settings = _SSL.chardb.settings or {}
 
     _SSL:DebugPrint(1, "Saved variables loaded")
+
+    _SSL.GUI.listFrame.playerList.selected = _SSL.playerName or _SSL.GUI.listFrame.playerList.selected
 end
 
 -- _SSL.eventHandlers.GROUP_FORMED = function(self, event, ...) end

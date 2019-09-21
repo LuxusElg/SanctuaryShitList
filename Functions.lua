@@ -1,5 +1,8 @@
 local addonName, _SSL = ...
 
+-- Add local namespace to global, so we can use it in XML
+SSL_GLOBAL = _SSL
+
 --[[ General helper functions ]]--
 
 function _SSL:strsplit(delimiter, text)

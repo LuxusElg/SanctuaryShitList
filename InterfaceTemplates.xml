@@ -173,10 +173,8 @@
 			</Layer>
 		</Layers>
 		<Frames>
-
 		</Frames>
 		<Scripts>
-
 		</Scripts>
 	</Frame>
 
@@ -243,12 +241,12 @@
 			</Button>
 			<Frame name="$parent_PlayerList" inherits="SSL_GUI_PlayerListTemplate">
 				<Size>
-					<AbsDimension x="205" y="409"/>
+					<AbsDimension x="136" y="409"/>
 				</Size>
 				<Anchors>
 					<Anchor point="TOPLEFT">
 						<Offset>
-							<AbsDimension x="22" y="-40"/>
+							<AbsDimension x="22" y="-60"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
@@ -264,30 +262,45 @@
             
 			<Frame name="$parent_ShitList" inherits="SSL_GUI_ShitListTemplate">
 				<Size>
-					<AbsDimension x="500" y="409"/>
+					<AbsDimension x="610" y="409"/>
 				</Size>
 				<Anchors>
 					<Anchor point="TOPLEFT" relativeTo="$parent_PlayerList" relativePoint="TOPRIGHT">
 						<Offset>
-							<AbsDimension x="22" y="0"/>
+							<AbsDimension x="10" y="0"/>
 						</Offset>
 					</Anchor>
 				</Anchors>
 				<Scripts>
 					<OnLoad>
-                    
 					</OnLoad>
 					<OnShow>
-
 					</OnShow>
 				</Scripts>
+			</Frame>
+			<Frame name="$parent_ShitListHeader">
+				<Size>
+					<AbsDimension x="300" y="10"/>
+				</Size>
+				<Scripts>
+					<OnLoad>
+						self.text = self:CreateFontString(self:GetName().."_Text", "ARTWORK")
+					</OnLoad>
+				</Scripts>
+				<Anchors>
+					<Anchor point="BOTTOMLEFT" relativeTo="$parent_ShitList" relativePoint="TOPLEFT">
+						<Offset>
+							<AbsDimension x="8" y="8"/>
+						</Offset>
+					</Anchor>
+				</Anchors>
 			</Frame>
         </Frames>
     </Frame>
 
     <Button name="SSL_GUI_ListButtonTemplate" virtual="true">
 		<Size>
-			<AbsDimension x="185" y="18"/>
+			<AbsDimension x="136" y="18"/>
 		</Size>
 		<Scripts>
 			<OnLoad>
@@ -314,25 +327,42 @@
 				</Anchor>
 				<Anchor point="BOTTOMRIGHT">
 					<Offset>
-						<AbsDimension x="0" y="1"/>
+						<AbsDimension x="20" y="1"/>
 					</Offset>
 				</Anchor>
 			</Anchors>
 		</HighlightTexture>
 	</Button>
     
-    <Frame name="SSL_GUI_ShitListEntryTemplate" virtual="true">
+    <Button name="SSL_GUI_ShitListEntryTemplate" virtual="true">
 		<Size>
-			<AbsDimension x="490" y="18"/>
+			<AbsDimension x="598" y="18"/>
 		</Size>
 		<Scripts>
 			<OnLoad>
 				self.text = self:CreateFontString(self:GetName().."_Text", "ARTWORK")
+				self.highlight = self:GetHighlightTexture();
+				self.highlight:SetVertexColor(0.196, 0.388, 0.8, 0.5);
 			</OnLoad>
 		</Scripts>
 		<Frames>
 
 		</Frames>
 		<NormalFont style="GameFontNormal"/>
-	</Frame>
+		<HighlightFont style="GameFontHighlight"/>
+		<HighlightTexture file="Interface\QuestFrame\UI-QuestLogTitleHighlight" alphaMode="ADD">
+			<Anchors>
+				<Anchor point="TOPLEFT">
+					<Offset>
+						<AbsDimension x="0" y="1"/>
+					</Offset>
+				</Anchor>
+				<Anchor point="BOTTOMRIGHT">
+					<Offset>
+						<AbsDimension x="20" y="1"/>
+					</Offset>
+				</Anchor>
+			</Anchors>
+		</HighlightTexture>
+	</Button>
 </Ui>
